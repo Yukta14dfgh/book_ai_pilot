@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  hashedPassword String?
+  name           String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  books          Book[]
+  conversations  AIConversation[]
+  exports        ExportJob[]
+}
+
+model Book {
+  id              String           @id @default(cuid())
+  title           String
+  slug            String           @unique
+  description     String?
+  genre           String?
+  logline         String?
+  targetWordCount Int?
+  status          String           @default("Drafting")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  ownerId         String
+  owner           User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  chapters        Chapter[]
+  exports         ExportJob[]
+  conversations   AIConversation[]
+}
+
+model Chapter {
+  id          String            @id @default(cuid())
+  title       String
+  orderIndex  Int
+  status      String            @default("Drafting")
+  sceneCount  Int               @default(1)
+  wordCount   Int               @default(0)
+  excerpt     String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  bookId      String
+  book        Book              @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  document    DocumentContent?
+  suggestions AISuggestion[]
+}
+
+model DocumentContent {
+  id        String   @id @default(cuid())
+  richText  Json
+  plainText String?
+  revision  Int      @default(1)
+  updatedAt DateTime @updatedAt
+  chapterId String   @unique
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+}
+
+model ExportJob {
+  id            String   @id @default(cuid())
+  format        String
+  status        String   @default("queued")
+  fileUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  bookId        String
+  requestedById String
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  requestedBy   User     @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+}
+
+model AIConversation {
+  id            String         @id @default(cuid())
+  title         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  usageTokens   Int            @default(0)
+  estimatedCost Float          @default(0)
+  bookId        String
+  userId        String
+  book          Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suggestions   AISuggestion[]
+}
+
+model AISuggestion {
+  id             String          @id @default(cuid())
+  action         String
+  prompt         String
+  selectedText   String?
+  outputText     String
+  accepted       Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  chapterId      String?
+  chapter        Chapter?        @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  conversationId String?
+  conversation   AIConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+}
