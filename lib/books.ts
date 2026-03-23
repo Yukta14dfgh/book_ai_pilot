@@ -210,6 +210,7 @@ export async function autosaveChapter(input: {
 }) {
   const plainText = extractPlainText(input.content);
   const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+  const richText = input.content as Prisma.InputJsonValue;
 
   await prisma.chapter.update({
     where: { id: input.chapterId },
@@ -219,12 +220,12 @@ export async function autosaveChapter(input: {
       document: {
         upsert: {
           create: {
-            richText: input.content,
+            richText,
             plainText,
             revision: 1
           },
           update: {
-            richText: input.content,
+            richText,
             plainText,
             revision: {
               increment: 1
